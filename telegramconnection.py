@@ -15,7 +15,6 @@ monitor = {"top": 0, "left": 0, "width": 1920, "height": 1080}
 output = "sct-{top}x{left}_{width}x{height}.png".format(**monitor)
 VIDEO_URL = "https://camera.lipetsk.ru/ms-27.camera.lipetsk.ru/live/6c9ed6fe-7ed1-11ee-9ee9-0050568c9a93/playlist.m3u8"
 
-
 dp = Dispatcher()
 
 
