@@ -1,54 +1,46 @@
 import asyncio
 import logging
 import sys
-from os import getenv
 
-from aiogram import Bot, Dispatcher, Router, types
+from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
-from aiogram.types import Message
-from aiogram.utils.markdown import hbold
+
+
+from ultralytics import YOLO
+import cv2
+import mss.tools
+import time
+import os
 
 # Bot token can be obtained via https://t.me/BotFather
-TOKEN = "6914215182:AAGjAJIbh0yM4ShjHw7O5c3G0rYj7p0DELY"
+TOKEN = "6633049165:AAH0RwkrnAmmEhE4hKF4Ujmnl-21VxwFMJA"
+model = YOLO('yolov8n.pt')
+monitor = {"top": 0, "left": 0, "width": 960, "height": 1080}
+output = "sct-{top}x{left}_{width}x{height}.png".format(**monitor)
 
 # All handlers should be attached to the Router (or Dispatcher)
 dp = Dispatcher()
 
 
-@dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
-    """
-    This handler receives messages with `/start` command
-    """
-    # Most event objects have aliases for API methods that can be called in events' context
-    # For example if you want to answer to incoming message you can use `message.answer(...)` alias
-    # and the target chat will be passed to :ref:`aiogram.methods.send_message.SendMessage`
-    # method automatically or call API method directly via
-    # Bot instance: `bot.send_message(chat_id=message.chat.id, ...)`
-    await message.answer(f"Hello, {hbold(message.from_user.full_name)}!")
-
-
-@dp.message()
-async def echo_handler(message: types.Message) -> None:
-    """
-    Handler will forward receive a message back to the sender
-
-    By default, message handler will handle all message types (like a text, photo, sticker etc.)
-    """
-    try:
-        # Send a copy of the received message
-        await message.send_copy(chat_id=message.chat.id)
-    except TypeError:
-        # But not all the types is supported to be copied so need to handle it
-        await message.answer("Nice try!")
-
-
 async def main() -> None:
     # Initialize Bot instance with a default parse mode which will be passed to all API calls
+
     bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
-    # And the run events dispatching
-    await dp.start_polling(bot)
+
+    with mss.mss() as sct:
+        while True:
+            sct_img = sct.grab(monitor)
+            mss.tools.to_png(sct_img.rgb, sct_img.size, output=output)
+
+            img = cv2.imread(output, 1)
+
+            results = model.predict(img)
+            test = results[0].boxes.data
+            for i in test:
+                if i[5] == 0:
+                    cv2.imwrite('C:\\Users\\artem\\PycharmProjects\\yolov8test\\photo.png', img)
+                    await bot.send_photo(chat_id='-1002033456616', photo=types.FSInputFile(path="C:\\Users\\artem\\PycharmProjects\\yolov8test\\photo.png"), caption="caption" )
+                    time.sleep(3)
 
 
 if __name__ == "__main__":
